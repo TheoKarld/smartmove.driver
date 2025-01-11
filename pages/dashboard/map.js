@@ -319,7 +319,7 @@ export default function TrackingMap(props) {
   // const direction = getDirectionFromOrigin(initialPosition, driverLocation);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="min-h-screen bg-gray-100">
       <div className="flex-grow">
         {/* Header */}
         <div className="bg-white border-b shadow-sm">
@@ -347,7 +347,7 @@ export default function TrackingMap(props) {
                         {driver.info.username.split(" ")[0]}
                       </h2>
                       <p className={`text-sm ${getStatusColor(driver.status)}`}>
-                        {driver.status} • Driver #{driver.id}
+                        {driver.status} •
                       </p>
                     </div>
                   </div>
