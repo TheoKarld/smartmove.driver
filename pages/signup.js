@@ -2,12 +2,14 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { FiEye, FiEyeOff } from "react-icons/fi"; // Import React Icons
+import { clg, Js } from "@/js/basic";
 
-export default function Signup() {
+export default function Signup(props) {
+  const { appLink } = props;
   const [formData, setFormData] = useState({
-    fullName: "",
+    username: "",
     email: "",
-    phoneNumber: "",
+    phone: "",
     password: "",
     licenseNumber: "", // Added license number field
   });
@@ -34,8 +36,8 @@ export default function Signup() {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = "Full Name is required";
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
     }
 
     if (!formData.email.trim()) {
@@ -48,10 +50,10 @@ export default function Signup() {
       newErrors.password = "Password is required";
     }
 
-    if (!formData.phoneNumber.trim()) {
-      newErrors.phoneNumber = "Phone number is required";
-    } else if (!/^\d{10}$/.test(formData.phoneNumber)) {
-      newErrors.phoneNumber = "Please enter a valid phone number (10 digits)";
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone number is required";
+    } else if (!/^\d{10}$/.test(formData.phone)) {
+      newErrors.phone = "Please enter a valid phone number (10 digits)";
     }
 
     if (!formData.licenseNumber.trim()) {
@@ -64,12 +66,32 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    var form = { ...formData };
+    form.account = "driver";
     if (validateForm()) {
       setIsLoading(true);
       try {
         // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        router.push("/dashboard");
+        fetch(`${appLink}/driverAuth/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: Js(form),
+        })
+          .then(async (resp) => {
+            var data = await resp.json();
+            clg(data);
+            if (data.err) {
+              setErrors(data.err);
+              setIsLoading(false);
+              return;
+            }
+            alert(
+              `${form.username} Your Account was created successfully. You can Login right away....`
+            );
+            router.push("/");
+          })
+          .catch((err) => {});
+        //
       } catch (error) {
         setErrors({
           submit: "Failed to sign up. Please try again.",
@@ -88,31 +110,32 @@ export default function Signup() {
           <p className="text-gray-500">Enter your details to sign up</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4 mt-6">
-          {/* Full Name Field */}
+          {/* Username Field */}
           <div className="space-y-2">
             <label
               className="text-sm font-medium text-gray-700"
-              htmlFor="fullName"
+              htmlFor="username"
             >
-              Full Name
+              Username
             </label>
             <input
+              required
               type="text"
-              id="fullName"
-              value={formData.fullName}
+              id="username"
+              value={formData.username}
               onChange={handleChange}
               className={`w-full p-3 border rounded-lg transition-colors
                 ${
-                  errors.fullName
+                  errors.username
                     ? "border-red-500 bg-red-50"
                     : "border-gray-300"
                 }
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
               `}
-              placeholder="Enter your full name"
+              placeholder="Enter your Username"
             />
-            {errors.fullName && (
-              <p className="text-sm text-red-500">{errors.fullName}</p>
+            {errors.username && (
+              <p className="text-sm text-red-500">{errors.username}</p>
             )}
           </div>
 
@@ -125,6 +148,7 @@ export default function Signup() {
               Email Address
             </label>
             <input
+              required
               type="email"
               id="email"
               value={formData.email}
@@ -141,33 +165,29 @@ export default function Signup() {
             )}
           </div>
 
-          {/* Phone Number Field
           <div className="space-y-2">
             <label
               className="text-sm font-medium text-gray-700"
-              htmlFor="phoneNumber"
+              htmlFor="phone"
             >
               Phone Number
             </label>
             <input
+              required
               type="text"
-              id="phoneNumber"
-              value={formData.phoneNumber}
+              id="phone"
+              value={formData.phone}
               onChange={handleChange}
               className={`w-full p-3 border rounded-lg transition-colors
-                ${
-                  errors.phoneNumber
-                    ? "border-red-500 bg-red-50"
-                    : "border-gray-300"
-                }
+                ${errors.phone ? "border-red-500 bg-red-50" : "border-gray-300"}
                 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
               `}
               placeholder="Enter your phone number"
             />
-            {errors.phoneNumber && (
-              <p className="text-sm text-red-500">{errors.phoneNumber}</p>
+            {errors.phone && (
+              <p className="text-sm text-red-500">{errors.phone}</p>
             )}
-          </div> */}
+          </div>
 
           {/* Password Field */}
           <div className="space-y-2">
@@ -179,6 +199,7 @@ export default function Signup() {
             </label>
             <div className="relative">
               <input
+                required
                 type={showPassword ? "text" : "password"}
                 id="password"
                 value={formData.password}
@@ -216,6 +237,7 @@ export default function Signup() {
               License Number
             </label>
             <input
+              required
               type="text"
               id="licenseNumber"
               value={formData.licenseNumber}
@@ -265,7 +287,7 @@ export default function Signup() {
           <p className="text-center text-sm text-gray-600">
             Already have an account?{" "}
             <Link
-              href="/login"
+              href="/"
               className="text-[#3D593E] hover:text-[#489749] font-medium"
             >
               Log in

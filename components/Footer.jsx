@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between text-center md:text-left">
           {/* Branding Section */}
           <div>
-            <h2 className="text-xl font-bold">ShopMart</h2>
+            <h2 className="text-xl font-bold">SMARTMOVE</h2>
             <p className="text-sm">
               Delivering seamless tracking and logistics solutions.
             </p>
@@ -54,7 +54,7 @@ export default function Footer() {
 
         {/* Copyright */}
         <div className="mt-2 text-xs text-center">
-          &copy; 2024 ShopMart. All rights reserved.
+          &copy; 2024 SMARTMOVE. All rights reserved.
         </div>
       </div>
     </footer>

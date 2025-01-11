@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { useState } from "react";
-import { FiHome } from "react-icons/fi";
+import { FiAirplay, FiHome, FiMap } from "react-icons/fi";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,9 +16,9 @@ export default function Navbar() {
         <div className="flex justify-between">
           <Link href="/" className="">
             <div className="flex">
-              <FiHome className="w-6 h-6 text-yellow-100" />
+              <FiMap className="w-6 h-6 text-yellow-100" />
               <span className="text-xl font-bold bg-gradient-to-r from-yellow-100 to-white bg-clip-text text-transparent pl-2">
-                ShopMart
+                SmartMove
               </span>
             </div>
           </Link>

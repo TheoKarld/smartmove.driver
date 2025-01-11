@@ -57,6 +57,7 @@ const allDrivers = [
 export default function DriverProfile() {
   const router = useRouter();
   const { id } = router.query;
+  console.log(id);
 
   const driver = allDrivers.find((d) => d.id === parseInt(id, 10));
 

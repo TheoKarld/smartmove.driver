@@ -1,0 +1,67 @@
+<div className="absolute inset-0 bg-blue-50">
+                {/* Grid Background */}
+                <div className="grid grid-cols-8 grid-rows-8 h-full">
+                  {[...Array(64)].map((_, i) => (
+                    <div key={i} className="border border-blue-100" />
+                  ))}
+                </div>
+
+                {/* Origin point marker */}
+                <div
+                  className="absolute w-4 h-4 rounded-full bg-red-500"
+                  style={{
+                    left: "calc(50% - 8px)",
+                    top: "calc(50% - 8px)",
+                  }}
+                >
+                  <div className="absolute -inset-4 border-2 border-red-200 rounded-full" />
+                </div>
+
+                {/* Path trail with gradient */}
+                {pathHistory.map((pos, index) => {
+                  const position = calculateMapPosition(pos);
+                  return (
+                    <div
+                      key={index}
+                      className="absolute w-2 h-2 rounded-full"
+                      style={{
+                        ...position,
+                        transform: "translate(-50%, -50%)",
+                        background: `rgba(59, 130, 246, ${
+                          (index / pathHistory.length) * 0.7
+                        })`,
+                        boxShadow:
+                          index === pathHistory.length - 1
+                            ? "0 0 10px rgba(59, 130, 246, 0.5)"
+                            : "none",
+                      }}
+                    />
+                  );
+                })}
+
+                {/* Driver marker */}
+                <div
+                  className="absolute transition-all duration-1000 ease-in-out"
+                  style={{
+                    ...mapPosition,
+                    transform: `translate(-50%, -50%) rotate(${
+                      Math.atan2(
+                        driverLocation.lat -
+                          (pathHistory[pathHistory.length - 2]?.lat ||
+                            driverLocation.lat),
+                        driverLocation.lng -
+                          (pathHistory[pathHistory.length - 2]?.lng ||
+                            driverLocation.lng)
+                      ) *
+                      (180 / Math.PI)
+                    }deg)`,
+                  }}
+                >
+                  <div className="relative">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
+                      <FiNavigation className="text-white" size={20} />
+                    </div>
+                    <div className="animate-ping absolute inset-0 bg-blue-400 rounded-full opacity-75" />
+                  </div>
+                </div>
+              </div>

@@ -1,7 +1,37 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/router";
+import { clg, ocn } from "@/js/basic";
 
-export default function DriverHome() {
+export default function DriverHome(props) {
+  var on = "",
+    router = useRouter(),
+    { appLink } = props,
+    { auth } = router.query,
+    [driver, setDriver] = useState({});
+
+  useEffect(() => {
+    if (on) return;
+    on = true;
+    var a = window.localStorage.getItem("smartAccess");
+    if (a && !auth) auth = a;
+    fetch(`${appLink}/driverAuth/validToken`, {
+      method: "GET",
+      headers: { accessToken: auth },
+    })
+      .then(async (resp) => {
+        var data = await resp.json();
+        clg(data);
+        if (data.error) {
+          alert(data.error);
+          return;
+        }
+        setDriver(data);
+      })
+      .catch((err) => {
+        clg(err);
+      });
+  }, []);
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-blue-50">
       {/* Header */}
@@ -15,7 +45,7 @@ export default function DriverHome() {
           </div>
           <div className="hidden md:flex space-x-6">
             <Link
-              href="/dashboard"
+              href={`/dashboard?auth=${auth}`}
               className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
             >
               <span>📊</span>
@@ -42,13 +72,16 @@ export default function DriverHome() {
               <span>⚙️</span>
               <span>Settings</span>
             </Link>
-            <Link
-              href="/login"
+            <a
+              onClick={() => {
+                window.localStorage.removeItem("smartAccess");
+                router.push("/");
+              }}
               className="flex items-center space-x-2 text-gray-600 hover:text-blue-600 transition-colors"
             >
               <span>🚪</span>
               <span>Logout</span>
-            </Link>
+            </a>
           </div>
         </div>
       </nav>
@@ -56,7 +89,9 @@ export default function DriverHome() {
       {/* Hero Section */}
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-16">
         <div className="max-w-7xl mx-auto px-6 text-center">
-          <h1 className="text-5xl font-bold mb-6">Welcome Back, Driver! 🌟</h1>
+          <h1 className="text-5xl font-bold mb-6">
+            Welcome Back, {ocn(driver) ? driver.info.username : "Driver"}! 🌟
+          </h1>
           <p className="text-xl text-blue-100 mb-10">
             Track deliveries, manage routes, and boost your performance in
             real-time
@@ -69,7 +104,7 @@ export default function DriverHome() {
               🔍 Start Tracking
             </Link>
             <Link
-              href="/dashboard"
+              href={`/dashboard?auth=${auth}`}
               className="bg-blue-700 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-600 transition-colors shadow-lg border border-blue-400"
             >
               📈 View Dashboard

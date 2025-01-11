@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import {
@@ -14,36 +14,56 @@ import {
   FiCalendar,
   FiActivity,
   FaSignOutAlt,
+  FiPlus,
 } from "react-icons/fi";
+import { barme, clg, datemap, ocn, parse, percentage } from "@/js/basic";
+import Loader from "@/components/Loader";
 
-export default function Dashboard() {
-  const router = useRouter();
-
+export default function Dashboard(props) {
+  var on = "",
+    router = useRouter(),
+    { appLink, months, driver, setDriver } = props,
+    { auth } = router.query,
+    [loading, setLoading] = useState(true),
+    date = datemap(),
+    month = months[date.m],
+    [funds, setFunds] = useState(0),
+    [actives, setActives] = useState("0 hrs"),
+    [delis, setDelis] = useState(0),
+    [delisdif, setDelisdif] = useState("+0"),
+    [fundsdif, setFundsdif] = useState("+0"),
+    [activesdif, setActivesdif] = useState("+0"),
+    [color1, setColor1] = useState("text-black"),
+    [color2, setColor2] = useState("text-black"),
+    [color3, setColor3] = useState("text-black");
   const handleStartTracking = () => {
-    router.push("/dashboard/map");
+    router.push(`/dashboard/map?auth=${auth}`);
   };
 
   const statsCards = [
     {
       icon: <FiTruck className="w-6 h-6" />,
       title: "Total Deliveries",
-      value: "42",
-      trend: "+12% from last month",
+      value: `${delis}`,
+      trend: `${delisdif}% from last month`,
       color: "text-blue-600",
+      color2: `${color1}`,
     },
     {
-      icon: <FiDollarSign className="w-6 h-6" />,
+      icon: <FiPlus className="w-6 h-6" />,
       title: "Total Earnings",
-      value: "$1,245",
-      trend: "+8% from last month",
+      value: `N${funds}`,
+      trend: `${fundsdif}% from last month`,
       color: "text-green-600",
+      color2: `${color2}`,
     },
     {
       icon: <FiClock className="w-6 h-6" />,
       title: "Active Hours",
-      value: "126 hrs",
-      trend: "+5% from last month",
+      value: `${actives}`,
+      trend: `${activesdif}% from last month`,
       color: "text-purple-600",
+      color2: `${color3}`,
     },
   ];
 
@@ -68,23 +88,112 @@ export default function Dashboard() {
     },
   ];
 
-  return (
+  function updatedelis() {
+    var x = lastdelis(),
+      b = ocn(driver.earnings[date.y][month].deliveries) + 40,
+      c;
+    setDelis(b);
+    if (parse(date.m) == 0) return;
+    if (b > x) {
+      c = percentage(x, b - x, 2);
+      clg(c);
+      setDelisdif(`+${x == 0 ? b : c}`);
+      setColor1("text-green-600");
+    } else if (b < x) {
+      c = percentage(x, x - b, 2);
+      clg(c);
+      setDelisdif(`-${c}`);
+      setColor1("text-red-600");
+    }
+  }
+  function lastdelis() {
+    if (parse(date.m) == 0) return 20;
+    return ocn(driver.earnings[date.y][parse(date.m) - 1].deliveries);
+  }
+  function updateactives() {}
+  function updatefunds() {
+    var x = lastfunds(),
+      a = driver.earnings[date.y][month].funds,
+      b = 0,
+      c;
+    for (var i in a) b += parse(a[i]);
+    setFunds(b ? barme(b) : 0);
+    if (parse(date.m) == 0) return;
+    if (b > x) {
+      c = percentage(x, b - x, 2);
+      clg(c);
+      setFundsdif(`+${c}`);
+      setColor2("text-green-600");
+    } else if (b < x) {
+      c = percentage(x, x - b, 2);
+      clg(c);
+      setFundsdif(`-${b == 0 ? x : c}`);
+      setColor2("text-red-600");
+    }
+  }
+  function lastfunds() {
+    if (parse(date.m) == 0) return 0;
+    var a = driver.earnings[date.y][parse(date.m) - 1].funds,
+      b = 0;
+    for (var i in a) b += parse(a[i]);
+    return b;
+  }
+  useEffect(() => {
+    if (on) return;
+    on = true;
+    var a = window.localStorage.getItem("smartAccess");
+    if (a && !auth) auth = a;
+    if (!ocn(driver)) {
+      fetch(`${appLink}/driverAuth/validToken`, {
+        method: "GET",
+        headers: { accessToken: auth },
+      })
+        .then(async (resp) => {
+          var data = await resp.json();
+          clg(data);
+          if (data.error) {
+            alert(data.error);
+            router.push("/");
+            return;
+          }
+          setDriver(data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          clg(err);
+        });
+    } else {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    if (!ocn(driver)) return;
+    updatefunds();
+    updatedelis();
+    updateactives();
+  }, [driver]);
+  return loading ? (
+    <Loader />
+  ) : (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Navbar */}
       <nav className="bg-white shadow-lg border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <Link
-              href="/dashboard/home"
+              href={`/dashboard/home?auth=${auth}`}
               className="flex items-center space-x-3"
             >
               <FiHome className="w-6 h-6 text-[#3D593E]" />
               <span className="text-xl font-bold bg-gradient-to-r from-[#557C56] to-[#3D593E] bg-clip-text text-transparent">
-                ShopMart
+                SMARTMOVE
               </span>
             </Link>
             <div className="flex items-center space-x-6">
-              <Link href="/dashboard/home" className="nav-icon-link">
+              <Link
+                href={`/dashboard/home?auth=${auth}`}
+                className="nav-icon-link"
+              >
                 <FiHome className="w-5 h-5" />
               </Link>
               <Link href="/dashboard/profile" className="nav-icon-link">
@@ -96,8 +205,11 @@ export default function Dashboard() {
               {/* <button className="nav-icon-link text-red-500 hover:text-red-600">
                 <FiLogOut className="w-5 h-5" />
               </button> */}
-              <Link
-                href="/login"
+              <a
+                onClick={() => {
+                  window.localStorage.removeItem("smartAccess");
+                  router.push("/");
+                }}
                 className="flex items-center space-x-3 text-blue-600 hover:text-blue-700"
               >
                 <button
@@ -107,7 +219,7 @@ export default function Dashboard() {
                   <FiLogOut className="w-5 h-5" />
                   <span>Logout</span>
                 </button>
-              </Link>
+              </a>
             </div>
           </div>
         </div>
@@ -118,7 +230,7 @@ export default function Dashboard() {
         {/* Welcome Header */}
         <div className="text-center mb-10">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Welcome back, John Doe
+            Welcome back, {ocn(driver) ? driver.info.username : ""}
           </h1>
           <p className="text-gray-600">Your delivery metrics at a glance</p>
         </div>
@@ -142,7 +254,9 @@ export default function Dashboard() {
                     <p className="text-2xl font-bold text-gray-900">
                       {card.value}
                     </p>
-                    <p className="text-xs text-green-600 mt-1">{card.trend}</p>
+                    <p className={`text-xs mt-1 ${card.color2}`}>
+                      {card.trend}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -254,7 +368,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <p className="text-gray-600 text-sm">
-              &copy; 2024 ShopMart. All rights reserved.
+              &copy; 2024 SMARTMOVE. All rights reserved.
             </p>
             <div className="flex space-x-4">
               <Link

@@ -10,6 +10,20 @@ import {
 // import { FaTruck, FaMapMarkerAlt, FaBullseye, FaClock } from "react-icons/fa";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { clg, datemap, Js, ocn } from "@/js/basic";
+import Loader from "@/components/Loader";
+import domap from "@/js/leaflet/leaflet";
+import docoder from "@/js/leaflet/leaflet-geocoder";
+var map_1 = "",
+  mapTiles = {
+    satelite: "http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+    terrain: "http://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}",
+  },
+  acuObj = {
+    enableHighAccuracy: true,
+    timeout: 1000,
+    maximumAge: 0,
+  };
 
 const generatePathCoordinates = () => {
   const time = Date.now() / 1000;
@@ -31,17 +45,6 @@ const formatTime = (date) => {
     minute: "2-digit",
     second: "2-digit",
   }).format(date);
-};
-
-const getStatusColor = (status) => {
-  switch (status) {
-    case "Available":
-      return "text-green-600";
-    case "On Route":
-      return "text-yellow-600";
-    default:
-      return "text-red-600";
-  }
 };
 
 const calculateDistance = (coord1, coord2) => {
@@ -67,22 +70,65 @@ const getDirectionFromOrigin = (origin, current) => {
   return directions.join("-") || "Center";
 };
 
-export default function TrackingMap() {
-  const router = useRouter();
-  const {
-    id = "Unknown",
-    name = "John Doe",
-    status = "Unavailable",
-    bio = "No details available",
-  } = router.query;
+function newmap(v, fnc) {
+  if (!L || !L.map) return;
+  clg(L);
+  if (map_1) return;
+  try {
+    var map = L.map(v, {
+        center: L.latLng(9.7866631, 8.8525467),
+        zoom: 5,
+        measureControl: true,
+        "pointer-event": "none",
+        minZoom: 1,
+      }),
+      eo = { map: map, markers: {}, track: true };
 
-  const initialPosition = { lat: 40.7128, lng: -74.006 };
+    L.tileLayer(mapTiles.terrain, {
+      tileSize: 512,
+      subdomains: ["mt0", "mt1", "mt2", "mt3"],
+      zoomOffset: -1,
+      minZoom: 2,
+      crossOrigin: true,
+      detectRetina: true,
+    }).addTo(map);
+    L.Control.geocoder().addTo(map);
+
+    return eo;
+  } catch (err) {
+    location.reload();
+  }
+}
+export default function TrackingMap(props) {
+  var on = "",
+    def = { lat: 9.7869931, lng: 8.8525467 },
+    router = useRouter(),
+    { appLink, stat, driver, setDriver } = props,
+    { auth } = router.query;
+
+  const initialPosition = def;
   const [driverLocation, setDriverLocation] = useState(initialPosition);
   const [lastUpdated, setLastUpdated] = useState(new Date());
-  const [deliveries, setDeliveries] = useState(status === "On Route" ? 3 : 0);
+  const [deliveries, setDeliveries] = useState(0);
   const [loading, setLoading] = useState(true);
   const [pathHistory, setPathHistory] = useState([]);
-  const [maxDistance, setMaxDistance] = useState(0);
+  const [maxDistance, setMaxDistance] = useState(0),
+    [direction, setDirection] = useState(""),
+    [mapPosition, setMapPosition] = useState(""),
+    [distanceFromOrigin, setDistanceFromOrigin] = useState(
+      calculateDistance(def, def)
+    );
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case stat[0]:
+        return "text-green-600";
+      case stat[1]:
+        return "text-yellow-600";
+      default:
+        return "text-red-600";
+    }
+  };
 
   const calculateMapPosition = (coord) => {
     const scale = 20;
@@ -92,36 +138,186 @@ export default function TrackingMap() {
     };
   };
 
-  useEffect(() => {
-    if (router.isReady) {
-      setLoading(false);
-      const initialDriverLocation = generatePathCoordinates();
-      setDriverLocation(initialDriverLocation);
-      setPathHistory([initialDriverLocation]);
+  function castme() {
+    fetch(`${appLink}/mapAuth/track/${driver.id}/on`, {
+      method: "GET",
+      headers: { accessToken: auth },
+    })
+      .then(async (resp) => {
+        var data = await resp.json();
+        clg(data);
+      })
+      .catch((err) => {
+        clg(err);
+        alert(
+          "There was an error sending your tracking status, please check your connection and refresh!!!"
+        );
+      });
+  }
+
+  function kickmap() {
+    map_1 = newmap("mapper");
+    geoposition(map_1);
+  }
+  function geoposition(mp) {
+    if (!navigator.geolocation) {
+      alert("device not allowing live tracking!!");
+      return;
     }
-
-    const interval = setInterval(() => {
-      const newLocation = generatePathCoordinates();
-      const distance = calculateDistance(initialPosition, newLocation);
-      setMaxDistance((prev) => Math.max(prev, distance));
-      setDriverLocation(newLocation);
-      setPathHistory((prev) => [...prev.slice(-50), newLocation]);
-      setLastUpdated(new Date());
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [router.isReady]);
-
-  if (loading)
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading...
-      </div>
+    navigator.geolocation.watchPosition(
+      (res) => {
+        liveTrack(mp, res.coords);
+      },
+      errFnc,
+      acuObj
     );
 
-  const mapPosition = calculateMapPosition(driverLocation);
-  const distanceFromOrigin = calculateDistance(initialPosition, driverLocation);
-  const direction = getDirectionFromOrigin(initialPosition, driverLocation);
+    function errFnc(err) {
+      clg("position error");
+      clg(err);
+      location.reload();
+    }
+  }
+  function iconer(c) {
+    var icon = L.divIcon({
+      iconSize: [17, 17],
+      iconAnchor: [10, 10],
+      popupAnchor: [-10, -10],
+      shadowSize: [0, 0],
+      className: c,
+    });
+    return icon;
+  }
+  function liveTrack(mp, res) {
+    if (!mp) return;
+    var { latitude, longitude } = res,
+      v1 = new L.LatLng(latitude, longitude),
+      v2;
+    def = v1;
+    setDriverLocation(v1);
+    setLastUpdated(new Date());
+    const distance = calculateDistance(initialPosition, v1);
+    setMaxDistance((prev) => Math.max(prev, distance));
+    setPathHistory((prev) => [...prev.slice(-50), v1]);
+    setMapPosition(calculateMapPosition(driverLocation));
+    setDistanceFromOrigin(calculateDistance(initialPosition, driverLocation));
+    setDirection(getDirectionFromOrigin(initialPosition, driverLocation));
+
+    clg("geoposition log");
+    if (mp.lock && mp.mark_1) {
+      v2 = coordistance({ map: mp.map, dist_1: mp.mark_1, dist_2: v1 });
+      mp.lock.innerHTML = `You are currently ${v2}Metres away from your Mark 1`;
+    }
+    if (!mp.markers[driver.id]) {
+      def = new L.LatLng(latitude, longitude);
+      var ic = iconer("animated-icon bgreen"),
+        marker = L.marker([latitude, longitude], {
+          icon: ic,
+          title: driver.info.username,
+        });
+      mp.markers[driver.id] = marker;
+      marker
+        .addTo(mp.map)
+        .bindPopup(`<h1>${driver.info.username}</h1>`)
+        .openPopup();
+      clg("icon");
+      document.getElementsByClassName("animated-icon")[0].innerHTML =
+        '<div id="driver-icon" className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-lg" style="background:blue;width:1.7rem;height:1.7rem;border-radius:100%;align-items:center;justify-content:center;display:flex"><svg stroke="currentColor" fill="none" stroke-width="2" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" class="text-white" height="16" width="16" xmlns="http://www.w3.org/2000/svg"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg></div>';
+      mp.map.setView(def, 19);
+    } else {
+      mp.markers[driver.id].setLatLng(v1);
+      if (mp.track) {
+        //mp.map.setView(def, 18);
+        mp.map.panTo(v1);
+        clg("new marker location set");
+      } else {
+        clg("tracking disabled");
+      }
+    }
+    clg("LatLng data");
+    sendmylocation({
+      latitude,
+      longitude,
+      time: datemap(),
+    });
+  }
+  async function sendmylocation(o) {
+    fetch(`${appLink}/mapAuth/location`, {
+      method: "POST",
+      headers: { accessToken: auth, "Content-Type": "application/json" },
+      body: Js(o),
+    })
+      .then(async (resp) => {
+        var data = await resp.json();
+      })
+      .catch((err) => {
+        clg(err);
+      });
+  }
+
+  useEffect(() => {
+    var a = document.getElementById("driver-icon");
+    if (!a) return;
+    a.style.transform = `translate(-50%, -50%) rotate(${
+      Math.atan2(
+        driverLocation.lat -
+          (pathHistory[pathHistory.length - 2]?.lat || driverLocation.lat),
+        driverLocation.lng -
+          (pathHistory[pathHistory.length - 2]?.lng || driverLocation.lng)
+      ) *
+      (180 / Math.PI)
+    }deg)`;
+  }, [driverLocation]);
+
+  useEffect(() => {
+    if (on) return;
+    on = true;
+    var a = window.localStorage.getItem("smartAccess");
+    if (a && !auth) auth = a;
+    if (!ocn(driver)) {
+      fetch(`${appLink}/driverAuth/validToken`, {
+        method: "GET",
+        headers: { accessToken: auth },
+      })
+        .then(async (resp) => {
+          var data = await resp.json();
+          clg(data);
+          if (data.error) {
+            alert(data.error);
+            router.push("/");
+            return;
+          }
+          setDriver(data);
+          setLoading(false);
+        })
+        .catch((err) => {
+          clg(err);
+        });
+    } else {
+      domap();
+      docoder();
+      castme();
+      kickmap();
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    if (!ocn(driver) || driver.status == stat[1]) return;
+    setDriver({ ...driver, status: stat[1] });
+    domap();
+    docoder();
+    castme();
+    kickmap();
+  }, [driver]);
+  useEffect(() => {
+    clg(pathHistory);
+  }, [pathHistory]);
+
+  if (loading) return <Loader />;
+
+  // const mapPosition = calculateMapPosition(driverLocation);
+  // const distanceFromOrigin = calculateDistance(initialPosition, driverLocation);
+  // const direction = getDirectionFromOrigin(initialPosition, driverLocation);
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -132,7 +328,7 @@ export default function TrackingMap() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 {/* <Link href={`/drivers/${id}`}> */}
-                <Link href={"/dashboard"}>
+                <Link href={`/dashboard?auth=${auth}`}>
                   <button
                     aria-label="Back to Profile"
                     className="flex items-center space-x-2 hover:bg-gray-100 p-2 rounded-lg text-gray-600"
@@ -145,12 +341,14 @@ export default function TrackingMap() {
                 <div>
                   <div className="flex items-center space-x-2">
                     <div className="w-10 h-10 bg-blue-600 text-white flex items-center justify-center rounded-full text-xl font-bold">
-                      {name?.charAt(0)}
+                      {driver.info.username?.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h2 className="font-semibold text-lg">{name}</h2>
-                      <p className={`text-sm ${getStatusColor(status)}`}>
-                        {status} • Driver #{id}
+                      <h2 className="font-semibold text-lg">
+                        {driver.info.username.split(" ")[0]}
+                      </h2>
+                      <p className={`text-sm ${getStatusColor(driver.status)}`}>
+                        {driver.status} • Driver #{driver.id}
                       </p>
                     </div>
                   </div>
@@ -158,7 +356,7 @@ export default function TrackingMap() {
               </div>
               <div className="hidden md:block text-sm text-gray-500">
                 <FiInfo className="inline mr-1" />
-                {bio}
+                {driver.bio}
               </div>
             </div>
           </div>
@@ -168,73 +366,7 @@ export default function TrackingMap() {
         <div className="max-w-7xl mx-auto p-4">
           <div className="bg-white rounded-lg shadow-lg p-4">
             <div className="h-96 bg-gray-200 rounded-lg relative overflow-hidden">
-              <div className="absolute inset-0 bg-blue-50">
-                {/* Grid Background */}
-                <div className="grid grid-cols-8 grid-rows-8 h-full">
-                  {[...Array(64)].map((_, i) => (
-                    <div key={i} className="border border-blue-100" />
-                  ))}
-                </div>
-
-                {/* Origin point marker */}
-                <div
-                  className="absolute w-4 h-4 rounded-full bg-red-500"
-                  style={{
-                    left: "calc(50% - 8px)",
-                    top: "calc(50% - 8px)",
-                  }}
-                >
-                  <div className="absolute -inset-4 border-2 border-red-200 rounded-full" />
-                </div>
-
-                {/* Path trail with gradient */}
-                {pathHistory.map((pos, index) => {
-                  const position = calculateMapPosition(pos);
-                  return (
-                    <div
-                      key={index}
-                      className="absolute w-2 h-2 rounded-full"
-                      style={{
-                        ...position,
-                        transform: "translate(-50%, -50%)",
-                        background: `rgba(59, 130, 246, ${
-                          (index / pathHistory.length) * 0.7
-                        })`,
-                        boxShadow:
-                          index === pathHistory.length - 1
-                            ? "0 0 10px rgba(59, 130, 246, 0.5)"
-                            : "none",
-                      }}
-                    />
-                  );
-                })}
-
-                {/* Driver marker */}
-                <div
-                  className="absolute transition-all duration-1000 ease-in-out"
-                  style={{
-                    ...mapPosition,
-                    transform: `translate(-50%, -50%) rotate(${
-                      Math.atan2(
-                        driverLocation.lat -
-                          (pathHistory[pathHistory.length - 2]?.lat ||
-                            driverLocation.lat),
-                        driverLocation.lng -
-                          (pathHistory[pathHistory.length - 2]?.lng ||
-                            driverLocation.lng)
-                      ) *
-                      (180 / Math.PI)
-                    }deg)`,
-                  }}
-                >
-                  <div className="relative">
-                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center shadow-lg">
-                      <FiNavigation className="text-white" size={20} />
-                    </div>
-                    <div className="animate-ping absolute inset-0 bg-blue-400 rounded-full opacity-75" />
-                  </div>
-                </div>
-              </div>
+              <div id="mapper" style={{ width: "100%", height: "100%" }}></div>
             </div>
 
             {/* Stats Section */}
