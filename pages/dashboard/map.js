@@ -173,7 +173,6 @@ export default function TrackingMap(props) {
     );
 
     function errFnc(err) {
-      alert("there was an error finding your location");
       clg("position error");
       clg(err);
     }
