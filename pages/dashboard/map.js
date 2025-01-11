@@ -149,7 +149,7 @@ export default function TrackingMap(props) {
       })
       .catch((err) => {
         clg(err);
-        alert(
+        clg(
           "There was an error sending your tracking status, please check your connection and refresh!!!"
         );
       });
