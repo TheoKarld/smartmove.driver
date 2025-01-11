@@ -217,7 +217,7 @@ export default function Dashboard(props) {
                   aria-label="Logout"
                 >
                   <FiLogOut className="w-5 h-5" />
-                  <span>Logout</span>
+                  {/* <span>Logout</span> */}
                 </button>
               </a>
             </div>
