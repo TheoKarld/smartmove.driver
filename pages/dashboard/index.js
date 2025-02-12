@@ -22,7 +22,7 @@ import Loader from "@/components/Loader";
 export default function Dashboard(props) {
   var on = "",
     router = useRouter(),
-    { appLink, months, driver, setDriver } = props,
+    { appLink, months, driver, setDriver, socket } = props,
     { auth } = router.query,
     [loading, setLoading] = useState(true),
     date = datemap(),
@@ -165,6 +165,10 @@ export default function Dashboard(props) {
     } else {
       setLoading(false);
     }
+    socket.on("ios", (o) => {
+      clg("dash");
+      clg(o);
+    });
   }, []);
   useEffect(() => {
     if (!ocn(driver)) return;

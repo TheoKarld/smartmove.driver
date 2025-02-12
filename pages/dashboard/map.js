@@ -81,9 +81,14 @@ function newmap(v, fnc) {
         measureControl: true,
         "pointer-event": "none",
         minZoom: 1,
+        rotate: true,
+        rotateControl: {
+          closeOnZeroBearing: true,
+          position: "bottomleft",
+        },
       }),
       eo = { map: map, markers: {}, track: true };
-
+    clg(map);
     L.tileLayer(mapTiles.terrain, {
       tileSize: 512,
       subdomains: ["mt0", "mt1", "mt2", "mt3"],
@@ -101,9 +106,9 @@ function newmap(v, fnc) {
 }
 export default function TrackingMap(props) {
   var on = "",
-    def = { lat: 9.7869931, lng: 8.8525467 },
+    def = { lat: 7.7869931, lng: 5.8525467 },
     router = useRouter(),
-    { appLink, stat, driver, setDriver } = props,
+    { appLink, stat, driver, setDriver, socket } = props,
     { auth } = router.query;
 
   const initialPosition = def;
@@ -116,7 +121,7 @@ export default function TrackingMap(props) {
     [direction, setDirection] = useState(""),
     [mapPosition, setMapPosition] = useState(""),
     [distanceFromOrigin, setDistanceFromOrigin] = useState(
-      calculateDistance(def, def)
+      calculateDistance(initialPosition, driverLocation)
     );
 
   const getStatusColor = (status) => {
@@ -199,8 +204,6 @@ export default function TrackingMap(props) {
     setMaxDistance((prev) => Math.max(prev, distance));
     setPathHistory((prev) => [...prev.slice(-50), v1]);
     setMapPosition(calculateMapPosition(driverLocation));
-    setDistanceFromOrigin(calculateDistance(initialPosition, driverLocation));
-    setDirection(getDirectionFromOrigin(initialPosition, driverLocation));
 
     clg("geoposition log");
     if (mp.lock && mp.mark_1) {
@@ -209,7 +212,7 @@ export default function TrackingMap(props) {
     }
     if (!mp.markers[driver.id]) {
       def = new L.LatLng(latitude, longitude);
-      var ic = iconer("animated-icon bgreen"),
+      var ic = iconer("animated-icon"),
         marker = L.marker([latitude, longitude], {
           icon: ic,
           title: driver.info.username,
@@ -266,6 +269,8 @@ export default function TrackingMap(props) {
       ) *
       (180 / Math.PI)
     }deg)`;
+    setDistanceFromOrigin(calculateDistance(initialPosition, driverLocation));
+    setDirection(getDirectionFromOrigin(initialPosition, driverLocation));
   }, [driverLocation]);
 
   useEffect(() => {
@@ -299,6 +304,9 @@ export default function TrackingMap(props) {
       kickmap();
       setLoading(false);
     }
+    socket.on("ios", (o) => {
+      clg(o);
+    });
   }, []);
   useEffect(() => {
     if (!ocn(driver) || driver.status == stat[1]) return;
@@ -308,9 +316,7 @@ export default function TrackingMap(props) {
     castme();
     kickmap();
   }, [driver]);
-  useEffect(() => {
-    clg(pathHistory);
-  }, [pathHistory]);
+  useEffect(() => {}, []);
 
   if (loading) return <Loader />;
 
@@ -323,7 +329,7 @@ export default function TrackingMap(props) {
       <div className="flex-grow">
         {/* Header */}
         <div className="bg-white border-b shadow-sm">
-          <div className="max-w-7xl mx-auto p-4">
+          <div className="max-w-7xl mx-auto p-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 {/* <Link href={`/drivers/${id}`}> */}
@@ -362,7 +368,7 @@ export default function TrackingMap(props) {
         </div>
 
         {/* Map Section */}
-        <div className="max-w-7xl mx-auto p-4">
+        <div className="max-w-7xl mx-auto p-4 px-sm-2">
           <div className="bg-white rounded-lg shadow-lg p-4">
             <div className="h-96 bg-gray-200 rounded-lg relative overflow-hidden">
               <div id="mapper" style={{ width: "100%", height: "100%" }}></div>
@@ -375,7 +381,7 @@ export default function TrackingMap(props) {
                   <FiMapPin />
                   <span>Current Location</span>
                 </div>
-                <p className="mt-2 font-mono">
+                <p className="mt-2 font-mono grey6">
                   {driverLocation.lat.toFixed(4)}°N,{" "}
                   {driverLocation.lng.toFixed(4)}°W
                 </p>

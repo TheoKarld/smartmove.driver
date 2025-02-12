@@ -98,7 +98,7 @@ export default function DriverHome(props) {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
-              href="/tracking-map"
+              href={`/dashboard/map?auth=${auth}`}
               className="bg-white text-blue-600 px-8 py-4 rounded-lg text-lg font-semibold hover:bg-blue-50 transition-colors shadow-lg"
             >
               🔍 Start Tracking
