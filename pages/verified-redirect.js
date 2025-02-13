@@ -1,7 +1,6 @@
 // Verification Success Page Component
 import React, { useState, useEffect } from "react";
 import { FiCheckCircle } from "react-icons/fi";
-import { Button } from "@/components/ui/button";
 
 export const Verified = () => {
   const [isChecked, setIsChecked] = useState(false);
