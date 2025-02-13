@@ -107,7 +107,8 @@ export default function Dashboard(props) {
     }
   }
   function lastdelis() {
-    if (parse(date.m) == 0) return 20;
+    if (parse(date.m) == 0) return 15;
+    
     return ocn(driver.earnings[date.y][month].deliveries);
   }
   function updateactives() {}
