@@ -108,10 +108,10 @@ export default function Dashboard(props) {
   }
   function lastdelis() {
     if (parse(date.m) == 0) return 20;
-    return ocn(driver.earnings[date.y][parse(date.m) - 1].deliveries);
+    return ocn(driver.earnings[date.y][month].deliveries);
   }
   function updateactives() {}
-  function updatefunds() {
+  function updatefunds() {clg(date.y);
     var x = lastfunds(),
       a = driver.earnings[date.y][month].funds,
       b = 0,
@@ -133,7 +133,7 @@ export default function Dashboard(props) {
   }
   function lastfunds() {
     if (parse(date.m) == 0) return 0;
-    var a = driver.earnings[date.y][parse(date.m) - 1].funds,
+    var a = driver.earnings[date.y][month].funds,
       b = 0;
     for (var i in a) b += parse(a[i]);
     return b;
