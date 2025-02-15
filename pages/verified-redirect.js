@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { FiCheckCircle } from "react-icons/fi";
 
-export const Verified = () => {
+export default const Verified = () => {
   const [isChecked, setIsChecked] = useState(false);
 
   useEffect(() => {
